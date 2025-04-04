@@ -1,0 +1,64 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  imageName: 'nextjsapp'
+  acrName: 'myaksregistry'
+  aksCluster: 'myPrivateAksCluster'
+  resourceGroup: 'rg-aks-infra'
+  dockerRegistryServiceConnection: 'My-ACR-Service-Connection'
+  aksServiceConnection: 'Micro-Service-Connection'
+  buildTag: '$(Build.BuildId)'
+
+stages:
+- stage: BuildAndScan
+  jobs:
+  - job: Build
+    steps:
+    - checkout: self
+
+    - script: |
+        npm install
+        npm run lint
+        npm test
+      displayName: 'Install, Lint, and Test'
+
+    - script: |
+        docker build -t $(acrName).azurecr.io/$(imageName):$(buildTag) .
+      displayName: 'Build Docker Image'
+
+    - script: |
+        # Example using Trivy to scan
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b .
+        ./trivy image --exit-code 1 --severity HIGH,CRITICAL $(acrName).azurecr.io/$(imageName):$(buildTag)
+      displayName: 'Scan Docker Image'
+      continueOnError: false  # Fail on vulnerabilities
+
+    - task: Docker@2
+      displayName: 'Push to ACR'
+      inputs:
+        containerRegistry: $(dockerRegistryServiceConnection)
+        command: 'push'
+        repository: $(imageName)
+        tags: |
+          $(buildTag)
+
+- stage: Deploy
+  dependsOn: BuildAndScan
+  jobs:
+  - job: Deploy
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Deploy to AKS'
+      inputs:
+        azureSubscription: $(aksServiceConnection)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az aks get-credentials -g $(resourceGroup) -n $(aksCluster)
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          # Optionally: kubectl apply -f k8s/ingress.yaml
