@@ -23,11 +23,12 @@ jobs:
       - name: Set AKS context
         uses: azure/aks-set-context@v1
         with:
-          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}   # rg-aks-infra
-          name: ${{ secrets.AKS_CLUSTER_NAME }}               # aks-micro-demo
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
 
       - name: Login to ACR
-        run: az acr login --name ${{ secrets.ACR_NAME }}      # regmicrodemo
+        run: az acr login --name ${{ secrets.ACR_NAME }}
 
       - name: Build & push Docker image
         uses: docker/build-push-action@v3
@@ -54,8 +55,9 @@ jobs:
       - name: Set AKS context
         uses: azure/aks-set-context@v1
         with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
           resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
-          name: ${{ secrets.AKS_CLUSTER_NAME }}
+          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
 
       - name: Deploy manifests to AKS
         run: |
