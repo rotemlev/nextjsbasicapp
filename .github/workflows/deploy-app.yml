@@ -6,7 +6,6 @@ on:
       - main
 
 env:
-  # ה־ACR_LOGIN_SERVER שלך
   ACR_LOGIN_SERVER: ${{ secrets.ACR_NAME }}.azurecr.io
 
 jobs:
