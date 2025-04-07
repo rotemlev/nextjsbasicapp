@@ -64,9 +64,18 @@ jobs:
 
       - name: Debug workspace
         run: |
-          echo "PWD = $(pwd)"
+          echo "PWD=$(pwd)"
           ls -R .
 
-      - name: Deploy all k8s manifests
+      - name: Show k8s manifests
+        run: |
+          echo "--- deployment.yaml ---"
+          cat k8s/deployment.yaml
+          echo "--- service.yaml ---"
+          cat k8s/service.yaml
+          echo "--- ingress.yaml ---"
+          cat k8s/ingress.yaml
+
+      - name: Apply k8s manifests
         run: |
           kubectl apply -f k8s
