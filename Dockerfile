@@ -1,10 +1,23 @@
-# Use the official Node.js 16 Alpine base image
-FROM node:16-alpine
+# Stage 1: Build
+FROM node:18-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
 COPY . .
-# Build the Next.js app
 RUN npm run build
+
+# Stage 2: Production image
+FROM node:18-alpine AS runner
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --production
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./
+
 EXPOSE 3000
 CMD ["npm", "start"]
