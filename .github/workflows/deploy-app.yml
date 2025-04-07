@@ -6,15 +6,15 @@ on:
       - main
 
 env:
+  # ה־ACR_LOGIN_SERVER שלך
   ACR_LOGIN_SERVER: ${{ secrets.ACR_NAME }}.azurecr.io
 
 jobs:
   build-and-scan:
     runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.build.outputs.image-tag }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Azure Login
         uses: azure/login@v1
@@ -24,37 +24,36 @@ jobs:
       - name: Set AKS context
         uses: azure/aks-set-context@v1
         with:
-          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
-          name: ${{ secrets.AKS_CLUSTER_NAME }}
+          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}   # rg-aks-infra
+          name: ${{ secrets.AKS_CLUSTER_NAME }}               # aks-micro-demo
 
       - name: Login to ACR
-        run: az acr login --name ${{ secrets.ACR_NAME }}
+        run: az acr login --name ${{ secrets.ACR_NAME }}      # regmicrodemo
 
       - name: Build & push Docker image
-        id: build
         uses: docker/build-push-action@v3
         with:
           context: .
           file: Dockerfile
           push: true
-          tags: ${{ env.ACR_LOGIN_SERVER }}/nextjsbasicapp:${{ github.sha }}
-        outputs:
-          image-tag: ${{ env.ACR_LOGIN_SERVER }}/nextjsbasicapp:${{ github.sha }}
+          tags: ${{ env.ACR_LOGIN_SERVER }}/nextjsbasicapp:latest
 
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ steps.build.outputs.image-tag }}
+          image-ref: ${{ env.ACR_LOGIN_SERVER }}/nextjsbasicapp:latest
 
   deploy:
     needs: build-and-scan
     runs-on: ubuntu-latest
     steps:
-      - uses: azure/login@v1
+      - name: Azure Login
+        uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - uses: azure/aks-set-context@v1
+      - name: Set AKS context
+        uses: azure/aks-set-context@v1
         with:
           resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
           name: ${{ secrets.AKS_CLUSTER_NAME }}
