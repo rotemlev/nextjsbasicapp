@@ -62,8 +62,11 @@ jobs:
           resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
           cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
 
-      - name: Deploy manifests to AKS
+      - name: Debug workspace
         run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/ingress.yaml
+          echo "PWD = $(pwd)"
+          ls -R .
+
+      - name: Deploy all k8s manifests
+        run: |
+          kubectl apply -f k8s
